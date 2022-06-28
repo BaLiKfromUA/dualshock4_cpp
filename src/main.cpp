@@ -2,10 +2,17 @@
 #include <functional>
 #include <cstring>
 #include <cassert>
-#include <chrono>
-#include <thread>
+#include <iostream>
 #include "hidapi.h"
+#include "GamepadEventDispatcher.h"
 
+
+
+// PS4 stuff
+// http://www.psdevwiki.com/ps4/DS4-USB
+// http://www.psdevwiki.com/ps4/DS4-BT
+// http://eleccelerator.com/wiki/index.php?title=DualShock_4
+// and a little bit of https://github.com/chrippa/ds4drv
 #define SONY_DUALSHOCK4                    27
 
 #define SONY_VENDOR 0x054C
@@ -23,7 +30,7 @@ struct Gamepad {
     wchar_t *serial_number;
 };
 
-struct InputOutState {
+struct LedState {
     unsigned char LEDRed;
     unsigned char LEDGreen;
     unsigned char LEDBlue;
@@ -31,7 +38,7 @@ struct InputOutState {
 };
 
 Gamepad CurGamepad{};
-InputOutState GamepadOutState{};
+LedState LedState{};
 
 void GamepadSearch() {
     struct hid_device_info *cur_dev;
@@ -53,46 +60,35 @@ void GamepadSearch() {
     }
 }
 
-void GamepadSetState(InputOutState OutState) {
-    if (CurGamepad.HidHandle != nullptr) {
-        if (CurGamepad.ControllerType == SONY_DUALSHOCK4 && CurGamepad.USBConnection) {
-            unsigned char outputReport[31];
-            memset(outputReport, 0, 31);
+void GamepadSetState(struct LedState OutState) {
+    assert(CurGamepad.HidHandle != nullptr);
 
-            outputReport[0] = 0x05;
-            outputReport[1] = 0xff;
-            outputReport[4] = 0; //OutState.SmallMotor;
-            outputReport[5] = 0; //OutState.LargeMotor;
-            outputReport[6] = std::clamp(OutState.LEDRed - OutState.LEDBrightness, 0, 255);
-            outputReport[7] = std::clamp(OutState.LEDGreen - OutState.LEDBrightness, 0, 255);
-            outputReport[8] = std::clamp(OutState.LEDBlue - OutState.LEDBrightness, 0, 255);
+    if (CurGamepad.ControllerType == SONY_DUALSHOCK4 && CurGamepad.USBConnection) {
+        unsigned char outputReport[31];
+        memset(outputReport, 0, 31);
 
-            hid_write(CurGamepad.HidHandle, outputReport, 31);
+        outputReport[0] = 0x05;
+        outputReport[1] = 0xff;
+        outputReport[4] = 0; //OutState.SmallMotor;
+        outputReport[5] = 0; //OutState.LargeMotor;
+        outputReport[6] = std::clamp(OutState.LEDRed - OutState.LEDBrightness, 0, 255);
+        outputReport[7] = std::clamp(OutState.LEDGreen - OutState.LEDBrightness, 0, 255);
+        outputReport[8] = std::clamp(OutState.LEDBlue - OutState.LEDBrightness, 0, 255);
 
-        } // todo: BT
-    }
+        hid_write(CurGamepad.HidHandle, outputReport, 31);
+    } // todo: BT
 }
 
 int main() {
-    GamepadSearch();
+    dualshock4::GamepadEventDispatcher eventDispatcher{};
 
-    printf("Glory to Ukraine!\n");
+    eventDispatcher.start();
 
-    GamepadOutState.LEDBrightness = 42;
+    eventDispatcher.registerEventHandler(dualshock4::KeyEvent::KEY_SOUTH, []() {
+        std::cout << std::this_thread::get_id() << "\n";
+    });
 
-    for (int i = 0; i < 10; ++i) {
-        if (i % 2 == 0) {
-            GamepadOutState.LEDBlue = 255;
-            GamepadOutState.LEDGreen = 0;
-            GamepadOutState.LEDRed = 0;
-        } else {
-            GamepadOutState.LEDBlue = 0;
-            GamepadOutState.LEDGreen = 255;
-            GamepadOutState.LEDRed = 255;
-        }
-        GamepadSetState(GamepadOutState);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
 
+    std::cout <<  std::this_thread::get_id() << "\n";
     return 0;
 }
