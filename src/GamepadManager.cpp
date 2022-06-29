@@ -4,6 +4,8 @@
 
 #include "GamepadManager.h"
 
+#define DEBUG_MODE
+
 namespace dualshock4 {
 
     void GamepadManager::gamepadSearch() {
@@ -45,5 +47,31 @@ namespace dualshock4 {
 
             hid_write(curGamepad.HidHandle, outputReport, 31);
         } // todo: BT
+    }
+
+    void GamepadManager::updateButtonState() {
+        assert(curGamepad.HidHandle != nullptr);
+        unsigned char packet[64];
+        memset(packet, 0, 64);
+        int res = hid_read_timeout(curGamepad.HidHandle, packet, 64, 1000);
+        assert(res != 0); // todo: handle failures later
+
+        if (packet[0] == 0) {
+            return; // no updates
+        }
+
+#ifdef DEBUG_MODE
+        printf("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n\n",
+               packet[0], packet[1], packet[2], packet[3], packet[4], packet[5], packet[6], packet[7], packet[8],
+               packet[9],
+               packet[10], packet[11], packet[12], packet[13], packet[14], packet[15], packet[16], packet[17],
+               packet[18], packet[19], packet[20],
+               packet[21], packet[22], packet[23], packet[24], packet[25], packet[26], packet[27], packet[28],
+               packet[29], packet[30],
+               packet[31], packet[32], packet[33], packet[34], packet[35], packet[36], packet[37], packet[38],
+               packet[39], packet[40],
+               packet[41], packet[42], packet[43], packet[44], packet[45], packet[46], packet[47], packet[48],
+               packet[49], packet[50]);
+#endif
     }
 }

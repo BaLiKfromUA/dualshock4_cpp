@@ -5,6 +5,8 @@
 #include "GamepadEventDispatcher.h"
 #include "GamepadManager.h"
 
+#define DELAY 1000
+
 namespace dualshock4 {
 
     void GamepadEventDispatcher::registerEventHandler(KeyEvent event, const std::function<void()> &handler) {
@@ -16,8 +18,8 @@ namespace dualshock4 {
         manager.gamepadSearch();
 
         while (isRunning.load()) {
-            // todo:
-            dispatcher.dispatch(KEY_SOUTH);
+            manager.updateButtonState();
+            std::this_thread::sleep_for(std::chrono::milliseconds(DELAY));
         }
     }
 }

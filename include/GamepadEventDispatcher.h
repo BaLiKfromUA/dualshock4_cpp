@@ -32,12 +32,8 @@ namespace dualshock4 {
     public:
         ~GamepadEventDispatcher() {
             stop();
-            if (eventLoopThread != nullptr) {
-                if (eventLoopThread->joinable()) {
-                    eventLoopThread->join();
-                }
-                operator delete(eventLoopThread);
-            }
+            wait();
+            operator delete(eventLoopThread);
         }
 
         void registerEventHandler(KeyEvent event, const std::function<void()> &handler);
@@ -51,6 +47,11 @@ namespace dualshock4 {
 
         void stop() {
             isRunning.store(false);
+        }
+
+        void wait() {
+            assert(eventLoopThread != nullptr && eventLoopThread->joinable());
+            eventLoopThread->join();
         }
     };
 
