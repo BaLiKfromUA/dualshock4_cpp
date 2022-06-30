@@ -23,25 +23,6 @@
 #define SONY_DS4_V2_USB 0x09CC
 #define SONY_DS4_BT 0x081F
 
-#define SONY_DS4_MASK_UP 0x00001
-#define SONY_DS4_MASK_DOWN 0x00002
-#define SONY_DS4_MASK_LEFT 0x00004
-#define SONY_DS4_MASK_RIGHT 0x00008
-#define SONY_DS4_MASK_S 0x01000
-#define SONY_DS4_MASK_E 0x02000
-#define SONY_DS4_MASK_W 0x04000
-#define SONY_DS4_MASK_N 0x08000
-
-
-#define SONY_DS4_OFFSET_UP 0
-#define SONY_DS4_OFFSET_DOWN 1
-#define SONY_DS4_OFFSET_LEFT 2
-#define SONY_DS4_OFFSET_RIGHT 3
-#define SONY_DS4_OFFSET_S 12
-#define SONY_DS4_OFFSET_E 13
-#define SONY_DS4_OFFSET_W 14
-#define SONY_DS4_OFFSET_N 15
-
 namespace dualshock4 {
 
     namespace internal {
@@ -62,6 +43,11 @@ namespace dualshock4 {
         };
     }
 
+    struct ButtonState {
+        bool up, down, left, right;
+        bool north, south, west, east;
+    };
+
     class GamepadManager {
     public:
         using buttonsMask = int;
@@ -69,12 +55,19 @@ namespace dualshock4 {
         internal::Gamepad curGamepad{};
         internal::LedState ledState{};
 
-        buttonsMask lastButtonState = 0;
 
     public:
         void gamepadSearch();
 
-        void updateButtonState();
+        ButtonState updateButtonState();
+
+        void setReadyColor() {
+            ledState.LEDGreen = 255;
+            ledState.LEDRed = 0;
+            ledState.LEDBlue = 0;
+            ledState.LEDBrightness = 42;
+            gamepadSetState(ledState);
+        }
 
         void gamepadSetState(struct internal::LedState OutState);
     };

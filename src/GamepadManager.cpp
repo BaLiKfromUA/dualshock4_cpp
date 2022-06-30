@@ -2,6 +2,9 @@
 // Created by balik on 28.06.22.
 //
 
+#include <cstdint>
+#include <bitset>
+#include <iostream>
 #include "GamepadManager.h"
 
 #define DEBUG_MODE
@@ -49,29 +52,41 @@ namespace dualshock4 {
         } // todo: BT
     }
 
-    void GamepadManager::updateButtonState() {
+    ButtonState GamepadManager::updateButtonState() {
         assert(curGamepad.HidHandle != nullptr);
-        unsigned char packet[64];
-        memset(packet, 0, 64);
-        int res = hid_read_timeout(curGamepad.HidHandle, packet, 64, 1000);
+        unsigned char buf[64];
+        memset(buf, 0, 64);
+        int res = hid_read_timeout(curGamepad.HidHandle, buf, 64, 1000);
         assert(res != 0); // todo: handle failures later
 
-        if (packet[0] == 0) {
-            return; // no updates
+        ButtonState result{};
+
+        if (buf[0] == 0) {
+            return result; // no updates
         }
 
-#ifdef DEBUG_MODE
-        printf("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n\n",
-               packet[0], packet[1], packet[2], packet[3], packet[4], packet[5], packet[6], packet[7], packet[8],
-               packet[9],
-               packet[10], packet[11], packet[12], packet[13], packet[14], packet[15], packet[16], packet[17],
-               packet[18], packet[19], packet[20],
-               packet[21], packet[22], packet[23], packet[24], packet[25], packet[26], packet[27], packet[28],
-               packet[29], packet[30],
-               packet[31], packet[32], packet[33], packet[34], packet[35], packet[36], packet[37], packet[38],
-               packet[39], packet[40],
-               packet[41], packet[42], packet[43], packet[44], packet[45], packet[46], packet[47], packet[48],
-               packet[49], packet[50]);
-#endif
+        bool isValid = true;
+        if (!curGamepad.USBConnection) {
+            // todo:
+        } else {
+            isValid = buf[0] == 0x01;
+            // todo: ignore packets from Dongle with no connected controller
+        }
+
+        if (isValid) {
+            //  based on https://gist.github.com/johndrinkwater/7708901
+            result.up = buf[5] == 0 || buf[5] == 1 || buf[5] == 7;
+            result.right = buf[5] == 1 || buf[5] == 2 || buf[5] == 3;
+            result.down = buf[5] == 3 || buf[5] == 4 || buf[5] == 5;
+            result.left = buf[5] == 5 || buf[5] == 6 || buf[5] == 7;
+
+
+            result.south = (buf[5] & 32) != 0;
+            result.east = (buf[5] & 64) != 0;
+            result.west = (buf[5] & 16) != 0;
+            result.north = (buf[5] & 128) != 0;
+        }
+
+        return result;
     }
 }
